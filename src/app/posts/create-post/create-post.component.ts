@@ -1,31 +1,100 @@
-import { Component, EventEmitter, Output } from '@angular/core';
-import { NgForm } from '@angular/forms';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { FormControl, FormGroup, NgForm, Validators } from '@angular/forms';
+import { ActivatedRoute, ParamMap } from '@angular/router';
 import { Post } from '../post.model';
 import { PostsService } from '../posts.service';
 
 @Component({
   selector: 'app-create-post',
   templateUrl: './create-post.component.html',
-  styleUrls: ['./create-post.component.css']
+  styleUrls: ['./create-post.component.css'],
 })
-export class CreatePostComponent {
-
-  newPost = "No Content"
+export class CreatePostComponent implements OnInit {
+  newPost = 'No Content';
   enteredTitle = '';
-  enteredContent = ''
+  enteredContent = '';
 
+  form!: FormGroup;
 
-  constructor(public postsService: PostsService) {}
+  isLoading = false;
 
-  onAddPost(form: NgForm) {
+  mode = 'create';
+  private postId!: any;
+  post: any;
+
+  imagePreview: any;
+
+  constructor(
+    public postsService: PostsService,
+    public route: ActivatedRoute
+  ) {}
+  ngOnInit(): void {
+    this.form = new FormGroup({
+      title: new FormControl(null, {
+        validators: [Validators.required, Validators.minLength(3)],
+      }),
+      content: new FormControl(null, { validators: [Validators.required] }),
+      
+      image: new FormControl(null,{ validators: [Validators.required]})
+    });
+    this.route.paramMap.subscribe((paramMap) => {
+      if (paramMap.has('postId')) {
+        this.mode = 'edit';
+        this.postId = paramMap.get('postId');
+        this.isLoading = true;
+        this.postsService.getPost(this.postId).subscribe((postData) => {
+          this.isLoading = false;
+          this.post = {
+            id: postData._id,
+            title: postData.title,
+            content: postData.content,
+          };
+          this.form?.setValue({
+            title: this.post.title,
+            content: this.post.content,
+          });
+        });
+      } else {
+        this.mode = 'create';
+        this.postId = null;
+      }
+    });
+  }
+
+  onAddPost() {
     // alert("Post added!")
     // this.newPost = this.entered
-    if(form.invalid) {
-      return
+    if (this.form?.invalid) {
+      return;
     }
-    this.postsService.addpost(form.value.title, form.value.content)
-    form.resetForm();
+    this.isLoading = true;
+    if (this.mode === 'create') {
+      this.postsService.addpost(
+        this.form?.value.title,
+        this.form?.value.content
+      );
+    } else {
+      this.postsService.updatePost(
+        this.postId,
+        this.form?.value.title,
+        this.form?.value.content
+      );
+    }
+    this.form?.reset();
+  }
+
+  onImagePicked(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.item(0);
+    this.form.patchValue({
+      image: file
+    });
+    this.form.get('image')?.updateValueAndValidity()
+    const reader: any = new FileReader()
+    reader.onload = () => {
+      this.imagePreview = reader.result
+    }
+    reader.readAsDataURL(file)
+    console.log(file)
+    console.log(this.imagePreview)
   }
 }
-
-
