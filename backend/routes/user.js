@@ -1,19 +1,20 @@
 const express = require("express");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
 const router = express.Router();
 
 router.post("/signup", (req, res, next) => {
   bcrypt.hash(req.body.password, 10).then((hash) => {
     console.log("Step 1 Done");
-    console.log(hash)
+    console.log(hash);
     const user = new User({
       email: req.body.email,
       password: hash,
     });
-    
-    user.save()
+
+    user
+      .save()
       .then((result) => {
         console.log("Step 2 Done");
         res.status(201).json({
@@ -24,40 +25,46 @@ router.post("/signup", (req, res, next) => {
       .catch((err) => {
         console.log("Something went wrong");
         res.status(500).json({
-          error: err
+          error: err,
         });
       });
   });
 });
 
 router.post("/login", (req, res, next) => {
-    let fetchedUser;
-    User.findOne({email: req.body.email}).then(user => {
-        if(!user) {
-            return res.status(401).json({
-                message: "Auth failed"
-            })
-        }
-        fetchedUser = user
-        return bcrypt.compare(req.body.password, user.password)
-    })
-    .then(result => {
-        if(!result) {
-            return res.status(401).json({
-                message: "Auth failed"
-            })
-        }
-
-        const token = jwt.sign({email: fetchedUser.email, userId: fetchedUser._id}, "secret_tghis_should_be_longer", {expiresIn: "1h"})
-        res.status(200).json({
-            token: token
-        })
-    })
-    .catch(err => {
+  let fetchedUser;
+  User.findOne({ email: req.body.email })
+    .then((user) => {
+      if (!user) {
         return res.status(401).json({
-            message: "Auth failed"
-        })
+          message: "Auth failed",
+        });
+      }
+      fetchedUser = user;
+      return bcrypt.compare(req.body.password, user.password);
     })
-})
+    .then((result) => {
+      if (!result) {
+        return res.status(401).json({
+          message: "Auth failed",
+        });
+      }
+
+      const token = jwt.sign(
+        { email: fetchedUser.email, userId: fetchedUser._id },
+        "secret_tghis_should_be_longer",
+        { expiresIn: "1h" }
+      );
+      res.status(200).json({
+        token: token,
+        expiresIn: 3600
+      });
+    })
+    .catch((err) => {
+      return res.status(401).json({
+        message: "Auth failed",
+      });
+    });
+});
 
 module.exports = router;
