@@ -4,6 +4,8 @@ const multer = require('multer')
 
 const Post = require('../models/post')
 
+const checkAuth = require('../middleware/check-auth')
+
 const router = express.Router()
 
 const MIME_TYPE_MAP = {
@@ -24,12 +26,13 @@ const storage = multer.diskStorage({
 })
 
 
-router.post('', multer({storage: storage}).single('image'),(req, res, next) => {
+router.post('', checkAuth, multer({storage: storage}).single('image'),(req, res, next) => {
     const url = req.protocol + '://' + req.get('host')
     const post = new Post({
         title: req.body.title,
         content: req.body.content,
-        imagePath: url + "/images/" + req.file.filename
+        imagePath: url + "/images/" + req.file.filename,
+        creator: req.userData.userId
     });
     // console.log(post)
     post.save().then((createdPost) => {
@@ -50,7 +53,7 @@ router.post('', multer({storage: storage}).single('image'),(req, res, next) => {
     
 })
 
-router.put('/:id', multer({storage: storage}).single('image'),(req, res, next) => {
+router.put('/:id', checkAuth, multer({storage: storage}).single('image'),(req, res, next) => {
     let imagePath = req.body.imagePath
     if(req.file) {
         const url = req.protocol + "://" + req.get("host")
@@ -60,13 +63,21 @@ router.put('/:id', multer({storage: storage}).single('image'),(req, res, next) =
         _id: req.body.id, 
         title: req.body.title,
         content: req.body.content,
-        imagePath: imagePath
+        imagePath: imagePath,
+        creator: req.userData.userId
     })
-    Post.updateOne({_id: req.params.id}, post).then(result => {
-        console.log(result)
-        res.status(200).json({
-            message: "Updated successfully"
-        })
+    Post.updateOne({_id: req.params.id, creator: req.userData.userId}, post).then(result => {
+        // console.log(result)
+        if(result.modifiedCount >0) {
+
+            res.status(200).json({
+                message: "Updated successfully"
+            })
+        } else {
+            res.status(401).json({
+                message: "Not authorized"
+            })
+        }
     })
 })
 
@@ -95,23 +106,23 @@ router.get("/:id", (req, res, next) =>{
     })
 })
 
-router.delete('/:id', async (req, res) => {
-    try {
-        await Post.findByIdAndDelete(req.params.id);
+// router.delete('/:id', checkAuth, async (req, res) => {
+//     try {
+//         await Post.findByIdAndDelete(req.params.id);
 
-        res.status(200).json({
-            status: "success",
-            message: "Document with Id " + req.params.id + " deleted successfully"
-        })
-    }catch(err) {
-        res.status(404).json({
-            status: "fail",
-            message: err.message
-        })
-    }
-})
+//         res.status(200).json({
+//             status: "success",
+//             message: "Document with Id " + req.params.id + " deleted successfully"
+//         })
+//     }catch(err) {
+//         res.status(404).json({
+//             status: "fail",
+//             message: err.message
+//         })
+//     }
+// })
 
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', checkAuth,(req, res, next) => {
     console.log(req.params.id)
     // Post.findByIdAndDelete(req.params.id).then(() => {
     //     res.status(200).json({
@@ -122,13 +133,19 @@ router.delete('/:id', (req, res, next) => {
     // })
 
     Post.deleteOne({
-        _id: req.params.id
+        _id: req.params.id, creator: req.userData.userId
     }).then((result) => {
         
-        console.log(result)
-        res.status(200).json({
-            message: `Post ${req.params.id} is deleted`
-        })
+        if(result.deletedCount >0) {
+
+            res.status(200).json({
+                message: "Updated successfully"
+            })
+        } else {
+            res.status(401).json({
+                message: "Not authorized"
+            })
+        }
     }).catch(() => {
         console.log("something went wrong")
     })

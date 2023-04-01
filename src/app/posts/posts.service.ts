@@ -17,12 +17,13 @@ export class PostsService {
   getPosts() {
     this.http.get<{message: string, posts: any}>('http://localhost:3000/api/posts')
     .pipe(map((postData) => {
-      return postData.posts.map((post: { title: any; content: any; _id: any; imagePath: any}) => {
+      return postData.posts.map((post: { title: any; content: any; _id: any; imagePath: any, creator: any}) => {
         return {
           title: post.title,
           content: post.content,
           id: post._id,
-          imagePath: post.imagePath
+          imagePath: post.imagePath,
+          creator: post.creator
         }
       })
     }))
@@ -39,7 +40,7 @@ export class PostsService {
   }
 
   getPost(id: any) {
-    return this.http.get<{_id: string, title: string, content: string, imagePath: string}>("http://localhost:3000/api/posts/" + id)
+    return this.http.get<{_id: string, title: string, content: string, imagePath: string, creator: string}>("http://localhost:3000/api/posts/" + id)
   }
   
 
@@ -55,7 +56,8 @@ export class PostsService {
         id: res.post.id,
         title: title,
         content: content,
-        imagePath: res.post.imagePath
+        imagePath: res.post.imagePath,
+        creator: null
       }
       // console.log(res.message)
       // const postId = res.postId
@@ -79,24 +81,14 @@ export class PostsService {
           id: id,
           title: title,
           content: content,
-          imagePath: image
+          imagePath: image,
+          creator: null
         }
       }
     // const post: Post = {id: id, title: title, content: content, imagePath: null}
     this.http.put("http://localhost:3000/api/posts/" + id, postData)
     .subscribe(response => {
-      const updatedPosts = [...this.posts]
-      const oldPostIndex = updatedPosts.findIndex(p => p.id === id)
-      const post: Post = {
-        id: id,
-          title: title,
-          content: content,
-          imagePath: ""
-      } 
-      updatedPosts[oldPostIndex] =  post
-      this.posts = updatedPosts
-      this.postsUpdated.next([...this.posts])
-      console.log(response)
+      
       this.router.navigate(['/'])
     })
   }
