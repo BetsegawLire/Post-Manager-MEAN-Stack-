@@ -12,7 +12,7 @@ const userRoutes = require('./routes/user')
 const app = express();
 
 // mongoose.connect("mongodb+srv://admin:x63B39YBBiQ5RwWC@cluster0.bccbipv.mongodb.net/node-angular?retryWrites=true&w=majority")
-mongoose.connect("mongodb+srv://admin:x63B39YBBiQ5RwWC@cluster0.bccbipv.mongodb.net/node-angular")
+mongoose.connect("mongodb+srv://admin:" + process.env.MONGO_ATLAS_PW + "@cluster0.bccbipv.mongodb.net/node-angular")
 .then(() => {
     console.log("Connected successfully")
 })
